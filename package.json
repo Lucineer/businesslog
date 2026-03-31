@@ -1,0 +1,35 @@
+{
+  "name": "@anthropic/businesslog",
+  "version": "1.0.0",
+  "description": "Businesslog.ai — AI-powered business logging, analytics, and intelligence worker",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "node --watch --loader ts-node/esm src/worker.ts",
+    "build": "tsc",
+    "start": "node dist/worker.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "setup": "bash scripts/setup.sh",
+    "backup": "bash scripts/backup.sh"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "better-sqlite3": "^11.6.0",
+    "jose": "^5.9.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/bcryptjs": "^2.4.0",
+    "ts-node": "^10.9.0"
+  }
+}

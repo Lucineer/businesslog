@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>businesslog.ai — Your Business AI. Living in Your Codebase.</title>
+<meta name="description" content="Open-source enterprise AI agent that lives in your company's repo. Multi-user, sandboxed, analytics-ready. Deploy anywhere in minutes.">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111119;
+  --bg-card: #16161f;
+  --bg-card-hover: #1c1c2a;
+  --text-primary: #e4e4ef;
+  --text-secondary: #8888a0;
+  --text-muted: #55556a;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.15);
+  --border: #1e1e2e;
+  --gradient-hero: linear-gradient(135deg, #0a0a0f 0%, #0f1629 50%, #0a0a0f 100%);
+  --gradient-accent: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  --transition: 0.2s ease;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; transition: color var(--transition); }
+a:hover { color: var(--accent-hover); }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Nav */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+nav .container {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px;
+}
+.nav-logo {
+  font-size: 1.25rem; font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-logo span { background: var(--gradient-accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+.nav-links a { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; }
+.nav-links a:hover { color: var(--text-primary); }
+.nav-cta {
+  background: var(--accent); color: white !important; padding: 8px 20px;
+  border-radius: var(--radius-sm); font-weight: 600; font-size: 0.875rem;
+}
+.nav-cta:hover { background: var(--accent-hover); }
+.hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+.hamburger span { width: 24px; height: 2px; background: var(--text-secondary); transition: var(--transition); border-radius: 1px; }
+
+/* Hero */
+.hero {
+  padding: 160px 0 100px;
+  background: var(--gradient-hero);
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero .container { position: relative; text-align: center; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border-radius: 50px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 32px;
+}
+.hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.hero h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800;
+  line-height: 1.1; margin-bottom: 24px; letter-spacing: -0.03em;
+}
+.hero h1 .gradient { background: var(--gradient-accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size: 1.2rem; color: var(--text-secondary); max-width: 640px; margin: 0 auto 40px; }
+.hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: var(--radius-sm);
+  font-weight: 600; font-size: 1rem; cursor: pointer;
+  border: none; transition: all var(--transition);
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 8px 30px var(--accent-glow); }
+.btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-muted); }
+
+/* Stats */
+.stats { padding: 60px 0; border-bottom: 1px solid var(--border); }
+.stats .container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; }
+.stat-item h3 { font-size: 2.5rem; font-weight: 800; background: var(--gradient-accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-item p { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+
+/* Features */
+.features { padding: 100px 0; }
+.section-label {
+  font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--accent); margin-bottom: 12px;
+}
+.section-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.02em; }
+.section-subtitle { font-size: 1.1rem; color: var(--text-secondary); max-width: 600px; margin-bottom: 60px; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.feature-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 32px; transition: all var(--transition);
+}
+.feature-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+.feature-icon {
+  width: 48px; height: 48px; border-radius: var(--radius-sm);
+  background: var(--accent-glow); display: flex; align-items: center;
+  justify-content: center; font-size: 1.5rem; margin-bottom: 20px;
+}
+.feature-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+.feature-card p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
+
+/* Deploy Section */
+.deploy { padding: 100px 0; background: var(--bg-secondary); }
+.deploy .container { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+.deploy-code {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; font-family: var(--font-mono); font-size: 0.9rem; overflow-x: auto;
+}
+.deploy-code .comment { color: var(--text-muted); }
+.deploy-code .command { color: #22c55e; margin-top: 8px; }
+.deploy-code .flag { color: var(--accent); }
+.deploy-code .output { color: var(--text-secondary); margin-top: 12px; font-size: 0.8rem; }
+.deploy-steps { list-style: none; margin-top: 24px; }
+.deploy-steps li {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; color: var(--text-secondary); font-size: 0.95rem;
+}
+.deploy-steps .step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-glow); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+}
+
+/* Trust */
+.trust { padding: 80px 0; }
+.trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.trust-card {
+  text-align: center; padding: 32px 24px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.trust-card .icon { font-size: 2rem; margin-bottom: 12px; }
+.trust-card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+.trust-card p { color: var(--text-secondary); font-size: 0.85rem; }
+
+/* Pricing */
+.pricing { padding: 100px 0; background: var(--bg-secondary); }
+.pricing-card {
+  max-width: 500px; margin: 0 auto; padding: 48px;
+  background: var(--bg-card); border: 2px solid var(--accent);
+  border-radius: var(--radius); text-align: center;
+  position: relative; overflow: hidden;
+}
+.pricing-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; background: var(--gradient-accent);
+}
+.pricing-card .price { font-size: 4rem; font-weight: 800; margin: 16px 0; }
+.pricing-card .price span { font-size: 1rem; color: var(--text-secondary); }
+.pricing-card .tagline { color: var(--accent); font-weight: 600; margin-bottom: 32px; }
+.pricing-features { list-style: none; text-align: left; margin-bottom: 32px; }
+.pricing-features li {
+  padding: 8px 0; color: var(--text-secondary); font-size: 0.95rem;
+  display: flex; align-items: center; gap: 10px;
+}
+.pricing-features li::before { content: '✓'; color: #22c55e; font-weight: 700; }
+
+/* CTA */
+.cta { padding: 100px 0; text-align: center; }
+.cta h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; }
+.cta p { color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 32px; }
+
+/* Footer */
+footer { padding: 48px 0; border-top: 1px solid var(--border); }
+footer .container { display: flex; justify-content: space-between; align-items: center; }
+footer .links { display: flex; gap: 24px; }
+footer .links a { color: var(--text-secondary); font-size: 0.85rem; }
+footer .copy { color: var(--text-muted); font-size: 0.85rem; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+  .nav-links.open {
+    display: flex; flex-direction: column; position: absolute;
+    top: 64px; left: 0; right: 0; background: var(--bg-primary);
+    padding: 24px; border-bottom: 1px solid var(--border); gap: 16px;
+  }
+  .stats .container { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: 1fr; }
+  .deploy .container { grid-template-columns: 1fr; }
+  .trust-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-actions { flex-direction: column; align-items: center; }
+}
+@media (max-width: 480px) {
+  .stats .container { grid-template-columns: 1fr; }
+  .trust-grid { grid-template-columns: 1fr; }
+}
+
+/* Scroll animations */
+.fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="container">
+    <a href="/" class="nav-logo">businesslog<span>.ai</span></a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#deploy">Deploy</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="https://github.com/cocapn/businesslog" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="/app" class="nav-cta">Get Started</a></li>
+    </ul>
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><span class="dot"></span> Open-source and self-hosted</div>
+    <h1>Your Business AI.<br><span class="gradient">Living in Your Codebase.</span></h1>
+    <p>The open-source enterprise AI agent that lives in your repo. Multi-user, sandboxed, analytics-ready. Deploy anywhere in minutes.</p>
+    <div class="hero-actions">
+      <a href="#deploy" class="btn btn-primary">Deploy Now</a>
+      <a href="#features" class="btn btn-secondary">See Features</a>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="stats">
+  <div class="container">
+    <div class="stat-item fade-in"><h3>100%</h3><p>Open Source</p></div>
+    <div class="stat-item fade-in"><h3>&lt;5min</h3><p>Deploy Time</p></div>
+    <div class="stat-item fade-in"><h3>0</h3><p>Data Leaves Your Server</p></div>
+    <div class="stat-item fade-in"><h3>∞</h3><p>Team Members</p></div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything your team needs.</h2>
+    <p class="section-subtitle">Built for teams that take AI seriously. Every feature designed for real business use.</p>
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">👥</div>
+        <h3>Multi-User Collaboration</h3>
+        <p>Team members with role-based access. Admin, member, and viewer roles. Activity logging and audit trails for every action.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">📊</div>
+        <h3>Analytics Dashboard</h3>
+        <p>Message volume, active users, popular topics. Export to CSV or JSON. Real-time metrics your leadership team will love.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🐳</div>
+        <h3>Docker Sandboxing</h3>
+        <p>One-command deployment. Fully containerized with Docker Compose. Sandboxed, secure, isolated from your production environment.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🔗</div>
+        <h3>A2A Integrations</h3>
+        <p>Agent-to-agent protocol for connecting to CRM, ERP, and other business systems. Salesforce and HubSpot integration points built in.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">🔒</div>
+        <h3>Compliance Ready</h3>
+        <p>SOC2-ready architecture with audit logging. GDPR-ready data handling. Self-hosted means your data never leaves your infrastructure.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">📋</div>
+        <h3>Business Tools</h3>
+        <p>Task tracking, meeting summaries, knowledge base, daily and weekly reports. Everything your team needs to stay aligned.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Deploy -->
+<section class="deploy" id="deploy">
+  <div class="container">
+    <div>
+      <div class="section-label">Deploy</div>
+      <h2 class="section-title">Deploy in minutes.</h2>
+      <p class="section-subtitle">One command to go from zero to a running enterprise AI. Docker handles everything.</p>
+      <ol class="deploy-steps">
+        <li><span class="step-num">1</span>Clone the repository</li>
+        <li><span class="step-num">2</span>Run the setup script</li>
+        <li><span class="step-num">3</span>Register your admin account</li>
+        <li><span class="step-num">4</span>Invite your team</li>
+      </ol>
+    </div>
+    <div class="deploy-code">
+      <div class="comment"># Clone and enter the project</div>
+      <div class="command">git clone https://github.com/cocapn/businesslog</div>
+      <div class="command"><span class="flag">cd</span> businesslog</div>
+      <br>
+      <div class="comment"># One-command setup</div>
+      <div class="command">./scripts/setup.sh</div>
+      <div class="output">
+        ✓ Docker found<br>
+        ✓ Configuration generated<br>
+        ✓ JWT secret created<br>
+        ✓ Building containers...<br>
+        ✓ Starting businesslog...<br>
+        <br>
+        🚀 Ready at http://localhost:3000
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust -->
+<section class="trust">
+  <div class="container">
+    <div style="text-align:center; margin-bottom: 48px;">
+      <div class="section-label">Trust</div>
+      <h2 class="section-title">Built for enterprise trust.</h2>
+    </div>
+    <div class="trust-grid">
+      <div class="trust-card fade-in">
+        <div class="icon">📖</div>
+        <h4>Open Source</h4>
+        <p>MIT licensed. Inspect every line of code. No black boxes.</p>
+      </div>
+      <div class="trust-card fade-in">
+        <div class="icon">🏠</div>
+        <h4>Self-Hosted</h4>
+        <p>Your data stays on your servers. No third-party data collection.</p>
+      </div>
+      <div class="trust-card fade-in">
+        <div class="icon">🛡️</div>
+        <h4>SOC2 Ready</h4>
+        <p>Audit logging, access controls, and encryption built in from day one.</p>
+      </div>
+      <div class="trust-card fade-in">
+        <div class="icon">🇪🇺</div>
+        <h4>GDPR Ready</h4>
+        <p>Data export, user deletion, and consent management out of the box.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div style="text-align:center; margin-bottom: 48px;">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Free. Forever.</h2>
+    </div>
+    <div class="pricing-card fade-in">
+      <h3>Businesslog</h3>
+      <div class="price">$0 <span>/ forever</span></div>
+      <div class="tagline">Free &amp; Open Source</div>
+      <ul class="pricing-features">
+        <li>Unlimited team members</li>
+        <li>Unlimited conversations</li>
+        <li>Analytics dashboard</li>
+        <li>Task management</li>
+        <li>Knowledge base</li>
+        <li>Docker deployment</li>
+        <li>Cloudflare Workers support</li>
+        <li>A2A protocol integration</li>
+        <li>CRM integration points</li>
+        <li>Full source code access</li>
+      </ul>
+      <a href="#deploy" class="btn btn-primary" style="width:100%;justify-content:center;">Deploy Now</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container fade-in">
+    <h2>Ready to give your team an AI?</h2>
+    <p>Deploy businesslog.ai in minutes. Your data stays yours.</p>
+    <div style="display:flex;gap:16px;justify-content:center;">
+      <a href="#deploy" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/cocapn/businesslog" target="_blank" rel="noopener" class="btn btn-secondary">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="links">
+      <a href="https://github.com/cocapn/businesslog">GitHub</a>
+      <a href="/docs">Documentation</a>
+      <a href="https://github.com/cocapn/businesslog/issues">Issues</a>
+      <a href="https://cocapn.ai">Cocapn</a>
+    </div>
+    <div class="copy">&copy; 2026 businesslog.ai — Built on cocapn</div>
+  </div>
+</footer>
+
+<script>
+// Mobile menu toggle
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('navLinks');
+hamburger.addEventListener('click', () => navLinks.classList.toggle('open'));
+
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
