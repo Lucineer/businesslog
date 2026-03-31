@@ -95,6 +95,8 @@ nav .container {
 }
 .hero h1 .gradient { background: var(--gradient-accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .hero p { font-size: 1.2rem; color: var(--text-secondary); max-width: 640px; margin: 0 auto 40px; }
+.typing-cursor { display: inline-block; color: var(--accent); animation: blink 1s step-end infinite; font-weight: 100; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 .btn {
   display: inline-flex; align-items: center; gap: 8px;
@@ -252,7 +254,7 @@ footer .copy { color: var(--text-muted); font-size: 0.85rem; }
   <div class="container">
     <div class="hero-badge"><span class="dot"></span> Open-source and self-hosted</div>
     <h1>Your Business AI.<br><span class="gradient">Living in Your Codebase.</span></h1>
-    <p>The open-source enterprise AI agent that lives in your repo. Multi-user, sandboxed, analytics-ready. Deploy anywhere in minutes.</p>
+    <p>The open-source enterprise AI agent that lives in your repo. <span id="typingText"></span><span class="typing-cursor">|</span></p>
     <div class="hero-actions">
       <a href="#deploy" class="btn btn-primary">Deploy Now</a>
       <a href="#features" class="btn btn-secondary">See Features</a>
@@ -445,6 +447,30 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.1 });
 document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Typing animation
+(function() {
+  var phrases = [
+    'Multi-user collaboration with role-based access.',
+    'Deploys in minutes with Docker or Cloudflare Workers.',
+    'Analytics dashboard. Task management. Knowledge base.',
+    'Your data never leaves your infrastructure.',
+    'SOC2-ready. GDPR-ready. Audit logging built in.',
+    'Free. Open source. Forever.'
+  ];
+  var el = document.getElementById('typingText');
+  if (!el) return;
+  var pi = 0, ci = 0, del = false, d = 80;
+  function t() {
+    var cur = phrases[pi];
+    if (del) { el.textContent = cur.substring(0, ci - 1); ci--; d = 40; }
+    else { el.textContent = cur.substring(0, ci + 1); ci++; d = 80; }
+    if (!del && ci === cur.length) { d = 2500; del = true; }
+    else if (del && ci === 0) { del = false; pi = (pi + 1) % phrases.length; d = 300; }
+    setTimeout(t, d);
+  }
+  t();
+})();
 </script>
 </body>
 </html>

@@ -357,7 +357,7 @@ app.post('/api/chat', async (c) => {
   if (!auth) return unauthorized();
   if (!checkRateLimit(auth.userId, 30, 60000)) return error('Rate limit exceeded', 429);
   const body = await c.req.json();
-  const { message, conversationId } = body;
+  const { message, conversationId, stream: wantStream } = body;
   if (!message) return error('message required');
 
   let conv: Conversation;
@@ -370,8 +370,32 @@ app.post('/api/chat', async (c) => {
 
   conv.messages.push({ id: uuid(), role: 'user', content: message, timestamp: now() });
 
-  // Simulate AI response (in production, call LLM API)
-  const aiResponse = generateAIResponse(message);
+  const messages = conv.messages.map(m => ({ role: m.role, content: m.content }));
+
+  let aiResponse: string;
+  const chatUrl = (process.env.LLM_BASE_URL ?? c.env?.LLM_BASE_URL ?? 'https://api.deepseek.com/v1') + '/chat/completions';
+  const apiKey = process.env.LLM_API_KEY ?? c.env?.LLM_API_KEY ?? '';
+  const model = process.env.LLM_MODEL ?? c.env?.LLM_MODEL ?? 'deepseek-chat';
+  if (apiKey) {
+    try {
+      const response = await fetch(chatUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, messages, max_tokens: 4096, temperature: 0.7 }),
+      });
+      if (!response.ok) {
+        aiResponse = generateAIResponse(message);
+      } else {
+        const data = await response.json() as { choices: Array<{ message: { content: string } }> };
+        aiResponse = data.choices?.[0]?.message?.content || generateAIResponse(message);
+      }
+    } catch {
+      aiResponse = generateAIResponse(message);
+    }
+  } else {
+    aiResponse = generateAIResponse(message);
+  }
+
   conv.messages.push({ id: uuid(), role: 'assistant', content: aiResponse, timestamp: now() });
   conv.updatedAt = now();
 
@@ -587,7 +611,7 @@ async function readFile(path: string): Promise<string> {
   }
 }
 
-// ─── AI Response Generator ───────────────────────────────────────────
+// ─── AI Response Generator (fallback) ──────────────────────────────
 
 function generateAIResponse(input: string): string {
   const lower = input.toLowerCase();

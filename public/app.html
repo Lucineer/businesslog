@@ -299,9 +299,94 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
   background: white; transition: left 0.2s;
 }
 .toggle.on::after { left: 22px; }
+
+/* Auth Modal */
+.auth-overlay {
+  position: fixed; inset: 0; background: var(--bg-primary);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+}
+.auth-card {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 12px; width: 90%; max-width: 400px; padding: 40px 32px;
+  text-align: center;
+}
+.auth-card h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+.auth-card p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px; }
+.auth-tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.auth-tab {
+  flex: 1; padding: 10px; font-size: 0.85rem; font-weight: 600;
+  color: var(--text-secondary); background: var(--bg-card);
+  cursor: pointer; transition: all 0.2s;
+}
+.auth-tab.active { background: var(--accent); color: white; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.auth-field label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+.auth-field input {
+  width: 100%; padding: 10px 14px; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 0.9rem; color: var(--text-primary);
+}
+.auth-field input:focus { border-color: var(--accent); }
+.auth-btn {
+  width: 100%; padding: 12px; border-radius: var(--radius);
+  background: var(--accent); color: white; font-weight: 600;
+  font-size: 0.95rem; margin-top: 4px; transition: background 0.2s;
+}
+.auth-btn:hover { background: var(--accent-hover); }
+.auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-error { color: var(--red); font-size: 0.8rem; margin-top: 8px; display: none; }
+
+/* Loading */
+.loading-spinner {
+  display: inline-block; width: 20px; height: 20px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { color: var(--text-muted); text-align: center; padding: 40px 20px; font-size: 0.9rem; }
 </style>
 </head>
 <body>
+
+<!-- Auth Overlay -->
+<div class="auth-overlay" id="authOverlay" style="display:none;">
+  <div class="auth-card">
+    <h2>businesslog<span style="color:var(--accent)">.ai</span></h2>
+    <p>Sign in to your workspace</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Login</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</button>
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="loginEmail" required placeholder="you@company.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="loginPassword" required placeholder="Your password" autocomplete="current-password">
+      </div>
+      <button type="submit" class="auth-btn" id="loginBtn">Sign In</button>
+    </form>
+    <form class="auth-form" id="registerForm" style="display:none;" onsubmit="handleRegister(event)">
+      <div class="auth-field">
+        <label>Name</label>
+        <input type="text" id="registerName" required placeholder="Your name" autocomplete="name">
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input type="email" id="registerEmail" required placeholder="you@company.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="registerPassword" required placeholder="Choose a password" minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="auth-btn" id="registerBtn">Create Account</button>
+    </form>
+  </div>
+</div>
 
 <!-- Mobile Toggle -->
 <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
@@ -317,26 +402,26 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
 
   <div class="team-section">
     <h4>Team</h4>
-    <div id="teamMembers"></div>
+    <div id="teamMembers"><div class="empty-state">Loading...</div></div>
   </div>
 
   <div class="threads">
     <div class="thread-group">
       <h4>Today</h4>
-      <div id="threadsToday"></div>
+      <div id="threadsToday"><div class="empty-state">No conversations</div></div>
     </div>
     <div class="thread-group">
       <h4>Yesterday</h4>
-      <div id="threadsYesterday"></div>
+      <div id="threadsYesterday"><div class="empty-state">No conversations</div></div>
     </div>
     <div class="thread-group">
       <h4>This Week</h4>
-      <div id="threadsWeek"></div>
+      <div id="threadsWeek"><div class="empty-state">No conversations</div></div>
     </div>
   </div>
 
   <div class="sidebar-footer">
-    <button onclick="openModal('adminModal')">⚙ Admin</button>
+    <button id="adminBtn" onclick="openModal('adminModal')" style="display:none;">⚙ Admin</button>
     <button onclick="openModal('analyticsModal')">📊 Analytics</button>
     <button onclick="openModal('settingsModal')">⚙ Settings</button>
   </div>
@@ -347,18 +432,18 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
   <div class="chat-header">
     <div class="chat-header-left">
       <div>
-        <h3 id="chatTitle">Q1 Revenue Analysis</h3>
-        <div class="chat-header-sub">Business Intelligence • Started 2 hours ago</div>
+        <h3 id="chatTitle">New Conversation</h3>
+        <div class="chat-header-sub" id="chatHeaderSub">Start a conversation with your AI assistant</div>
       </div>
     </div>
     <div class="chat-header-actions">
-      <button title="Search" onclick="toggleDetail()">📁</button>
+      <button title="Files" onclick="toggleDetail()">📁</button>
       <button title="More">⋯</button>
     </div>
   </div>
 
   <div class="messages" id="messages">
-    <!-- Messages populated by JS -->
+    <div class="empty-state" id="emptyMessages">Send a message to start a conversation</div>
   </div>
 
   <div class="chat-input">
@@ -374,7 +459,23 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
 <aside class="detail-panel" id="detailPanel">
   <div class="detail-content">
     <h3>📁 Repository Files</h3>
-    <div class="file-tree" id="fileTree"></div>
+    <div class="file-tree" id="fileTree">
+      <div class="file-item"><span class="icon">📁</span>config/</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;cocapn.yml</div>
+      <div class="file-item"><span class="icon">📁</span>src/</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;worker.ts</div>
+      <div class="file-item"><span class="icon">📁</span>&nbsp;&nbsp;users/</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;&nbsp;&nbsp;auth.ts</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;&nbsp;&nbsp;store.ts</div>
+      <div class="file-item"><span class="icon">📁</span>&nbsp;&nbsp;business/</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;&nbsp;&nbsp;tasks.ts</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;&nbsp;&nbsp;reports.ts</div>
+      <div class="file-item"><span class="icon">📁</span>public/</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;index.html</div>
+      <div class="file-item"><span class="icon">📄</span>&nbsp;&nbsp;app.html</div>
+      <div class="file-item"><span class="icon">📄</span>Dockerfile</div>
+      <div class="file-item"><span class="icon">📄</span>README.md</div>
+    </div>
   </div>
 </aside>
 
@@ -390,7 +491,7 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
         <thead>
           <tr><th>Member</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
         </thead>
-        <tbody id="adminTableBody"></tbody>
+        <tbody id="adminTableBody"><tr><td colspan="5" class="empty-state">Loading...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -404,23 +505,23 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
       <button class="modal-close" onclick="closeModal('analyticsModal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="stats-grid">
-        <div class="stat-card"><div class="label">Messages Today</div><div class="value">247</div><div class="change">+12% vs yesterday</div></div>
-        <div class="stat-card"><div class="label">Active Users</div><div class="value">8</div><div class="change">+2 this week</div></div>
-        <div class="stat-card"><div class="label">Avg Response</div><div class="value">1.2s</div><div class="change">-0.3s improvement</div></div>
-        <div class="stat-card"><div class="label">Satisfaction</div><div class="value">94%</div><div class="change">+5% this month</div></div>
+      <div class="stats-grid" id="analyticsStats">
+        <div class="stat-card"><div class="label">Messages Today</div><div class="value" id="statMsgToday">--</div><div class="change" id="statMsgChange"></div></div>
+        <div class="stat-card"><div class="label">Active Users</div><div class="value" id="statActiveUsers">--</div><div class="change" id="statUsersChange"></div></div>
+        <div class="stat-card"><div class="label">Avg Response</div><div class="value" id="statAvgResp">--</div><div class="change" id="statRespChange"></div></div>
+        <div class="stat-card"><div class="label">Satisfaction</div><div class="value" id="statSatisfaction">--</div><div class="change" id="statSatChange"></div></div>
       </div>
       <div class="chart-section">
         <h4>Message Volume (Last 7 Days)</h4>
-        <div class="bar-chart" id="barChart"></div>
+        <div class="bar-chart" id="barChart"><div class="empty-state">Loading chart...</div></div>
       </div>
       <div class="chart-section">
         <h4>Popular Topics</h4>
-        <div class="topics-cloud" id="topicsCloud"></div>
+        <div class="topics-cloud" id="topicsCloud"><span class="empty-state">Loading topics...</span></div>
       </div>
       <div class="export-btns">
-        <button class="export-btn" onclick="alert('Exporting CSV...')">Export CSV</button>
-        <button class="export-btn" onclick="alert('Exporting JSON...')">Export JSON</button>
+        <button class="export-btn" onclick="exportAnalytics('csv')">Export CSV</button>
+        <button class="export-btn" onclick="exportAnalytics('json')">Export JSON</button>
       </div>
     </div>
   </div>
@@ -438,244 +539,616 @@ input, textarea { font-family: var(--font); border: none; background: none; colo
       <div id="settingsIntegrations"></div>
       <h4 style="margin:24px 0 12px;">Team Settings</h4>
       <div id="settingsTeam"></div>
+      <h4 style="margin:24px 0 12px;">Account</h4>
+      <div style="padding:12px 0;">
+        <button style="padding:8px 16px;border-radius:var(--radius);background:var(--bg-card);border:1px solid var(--border);font-size:0.85rem;color:var(--red);" onclick="handleLogout()">Sign Out</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-// --- DATA ---
-const COLORS = ['#3b82f6','#ef4444','#22c55e','#eab308','#8b5cf6','#ec4899','#14b8a6','#f97316'];
-const team = [
-  { id: 1, name: 'Sarah Chen', role: 'admin', email: 'sarah@acme.co', status: 'online', color: COLORS[0] },
-  { id: 2, name: 'James Wilson', role: 'admin', email: 'james@acme.co', status: 'online', color: COLORS[1] },
-  { id: 3, name: 'Maria Garcia', role: 'member', email: 'maria@acme.co', status: 'online', color: COLORS[2] },
-  { id: 4, name: 'Alex Kim', role: 'member', email: 'alex@acme.co', status: 'away', color: COLORS[3] },
-  { id: 5, name: 'Patel Ravi', role: 'member', email: 'ravi@acme.co', status: 'online', color: COLORS[4] },
-  { id: 6, name: 'Lisa Zhang', role: 'viewer', email: 'lisa@acme.co', status: 'offline', color: COLORS[5] },
-  { id: 7, name: 'Tom Brown', role: 'member', email: 'tom@acme.co', status: 'offline', color: COLORS[6] },
-];
-const threads = {
-  today: [
-    { id: 1, title: 'Q1 Revenue Analysis', preview: 'Based on the data, Q1 revenue increased...' },
-    { id: 2, title: 'Sprint Planning Notes', preview: 'Here are the action items from today\'s...' },
-    { id: 3, title: 'Customer Feedback Summary', preview: 'I\'ve analyzed the 340 support tickets...' },
-  ],
-  yesterday: [
-    { id: 4, title: 'Marketing Campaign ROI', preview: 'The social media campaign generated...' },
-    { id: 5, title: 'Server Migration Plan', preview: 'Step 1: Backup all databases...' },
-  ],
-  week: [
-    { id: 6, title: 'Quarterly Report Draft', preview: 'Executive summary: revenue targets met...' },
-    { id: 7, title: 'New Hire Onboarding', preview: 'Welcome kit items: laptop, access...' },
-    { id: 8, title: 'Product Roadmap 2026', preview: 'Phase 1 launches in April with...' },
-  ]
-};
-const sampleMessages = [
-  { role: 'user', name: 'Sarah Chen', color: COLORS[0], content: 'Can you pull the Q1 revenue numbers and compare them to our forecast?', time: '10:32 AM' },
-  { role: 'assistant', name: 'businesslog.ai', color: '#3b82f6', content: 'I\'ve analyzed the Q1 revenue data. Here\'s the summary:\n\n<strong>Revenue vs Forecast</strong>\n\n<pre>Month    | Actual  | Forecast | Variance\n---------|---------|----------|---------\nJan      | $420K   | $400K    | +5.0%\nFeb      | $385K   | $410K    | -6.1%\nMar      | $510K   | $450K    | +13.3%\n---------|---------|----------|---------\nQ1 Total | $1.315M | $1.260M  | +4.4%</pre>\n\nKey findings:\n\n- March exceeded forecast by <strong>13.3%</strong>, driven by enterprise deals\n- February dipped due to seasonal slowdown\n- Overall Q1 beat forecast by <strong>+$55K (+4.4%)</strong>\n\nWould you like me to break this down by product line or region?', time: '10:33 AM' },
-  { role: 'user', name: 'James Wilson', color: COLORS[1], content: 'Great data. What about the pipeline for Q2?', time: '10:35 AM' },
-  { role: 'assistant', name: 'businesslog.ai', color: '#3b82f6', content: 'The Q2 pipeline looks strong based on current CRM data:\n\n- <strong>Active opportunities:</strong> 47 deals worth $2.1M\n- <strong>Weighted pipeline:</strong> $890K (42% probability)\n- <strong>Key deals:</strong> 3 enterprise accounts in final negotiation\n\nTop opportunities:\n1. <strong>Acme Corp</strong> — $180K (90% probability, closing April)\n2. <strong>TechStart Inc</strong> — $120K (75% probability, closing May)\n3. <strong>Global Media Co</strong> — $250K (60% probability, closing June)\n\nBased on historical conversion rates, projected Q2 revenue is <strong>$1.4M</strong>.', time: '10:36 AM' },
-];
-const barData = [
-  { label: 'Mon', value: 65 }, { label: 'Tue', value: 82 },
-  { label: 'Wed', value: 91 }, { label: 'Thu', value: 78 },
-  { label: 'Fri', value: 95 }, { label: 'Sat', value: 34 },
-  { label: 'Sun', value: 28 },
-];
-const topics = [
-  { name: 'Revenue', size: 'large' }, { name: 'Pipeline', size: 'large' },
-  { name: 'Sprint Planning', size: 'medium' }, { name: 'Customer Support', size: 'medium' },
-  { name: 'Infrastructure', size: 'medium' }, { name: 'Security', size: 'small' },
-  { name: 'Hiring', size: 'small' }, { name: 'Marketing', size: 'small' },
-  { name: 'Product Roadmap', size: 'small' }, { name: 'Compliance', size: 'small' },
-  { name: 'Reporting', size: 'small' }, { name: 'Integration', size: 'small' },
-];
-const files = [
-  { name: 'config/', type: 'dir' },
-  { name: '  cocapn.yml', type: 'file' },
-  { name: 'src/', type: 'dir' },
-  { name: '  worker.ts', type: 'file' },
-  { name: '  users/', type: 'dir' },
-  { name: '    auth.ts', type: 'file' },
-  { name: '    store.ts', type: 'file' },
-  { name: '  business/', type: 'dir' },
-  { name: '    tasks.ts', type: 'file' },
-  { name: '    reports.ts', type: 'file' },
-  { name: 'public/', type: 'dir' },
-  { name: '  index.html', type: 'file' },
-  { name: '  app.html', type: 'file' },
-  { name: 'Dockerfile', type: 'file' },
-  { name: 'README.md', type: 'file' },
-];
-const integrations = [
-  { name: 'Salesforce CRM', desc: 'Sync contacts and deals', on: true },
-  { name: 'HubSpot', desc: 'Marketing automation', on: false },
-  { name: 'Slack', desc: 'Team notifications', on: true },
-  { name: 'GitHub', desc: 'Repository access', on: true },
-  { name: 'Jira', desc: 'Issue tracking', on: false },
-];
-const teamSettings = [
-  { name: 'Activity Logging', desc: 'Track all user actions', on: true },
-  { name: 'Analytics Dashboard', desc: 'Enable team analytics', on: true },
-  { name: 'Data Export', desc: 'Allow CSV/JSON export', on: true },
-  { name: 'Auto-Reports', desc: 'Generate daily summaries', on: false },
-];
+// --- STATE ---
+var COLORS = ['#3b82f6','#ef4444','#22c55e','#eab308','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+var currentUser = null;
+var authToken = null;
+var currentConversationId = null;
+var conversations = [];
+var teamMembers = [];
+
+// --- HELPERS ---
+function initials(name) { return (name || '').split(' ').map(function(n) { return n[0]; }).join(''); }
+function escapeHtml(t) { return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function getToken() { return localStorage.getItem('accessToken'); }
+function isAuthenticated() { return !!getToken(); }
+function apiUrl(path) {
+  var base = window.location.origin;
+  return base + path;
+}
+
+function authHeaders() {
+  var headers = { 'Content-Type': 'application/json' };
+  var token = getToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return headers;
+}
+
+function apiRequest(method, path, body) {
+  var opts = { method: method, headers: authHeaders() };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(apiUrl(path), opts).then(function(res) {
+    if (res.status === 401) {
+      localStorage.removeItem('accessToken');
+      showAuthOverlay();
+      throw new Error('Unauthorized');
+    }
+    return res.json().then(function(data) {
+      if (!res.ok) throw new Error(data.error || data.message || 'Request failed');
+      return data;
+    });
+  });
+}
+
+// --- AUTH ---
+function showAuthOverlay() {
+  document.getElementById('authOverlay').style.display = 'flex';
+}
+
+function hideAuthOverlay() {
+  document.getElementById('authOverlay').style.display = 'none';
+}
+
+function switchAuthTab(tab) {
+  var loginForm = document.getElementById('loginForm');
+  var registerForm = document.getElementById('registerForm');
+  var tabLogin = document.getElementById('tabLogin');
+  var tabRegister = document.getElementById('tabRegister');
+  var errorEl = document.getElementById('authError');
+  errorEl.style.display = 'none';
+
+  if (tab === 'login') {
+    loginForm.style.display = 'flex';
+    registerForm.style.display = 'none';
+    tabLogin.classList.add('active');
+    tabRegister.classList.remove('active');
+  } else {
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'flex';
+    tabLogin.classList.remove('active');
+    tabRegister.classList.add('active');
+  }
+}
+
+function showAuthError(msg) {
+  var el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  var email = document.getElementById('loginEmail').value.trim();
+  var password = document.getElementById('loginPassword').value;
+  var btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+
+  fetch(apiUrl('/api/auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, password: password })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.accessToken) {
+      localStorage.setItem('accessToken', data.accessToken);
+      if (data.user) currentUser = data.user;
+      hideAuthOverlay();
+      initApp();
+    } else {
+      showAuthError(data.error || data.message || 'Login failed');
+    }
+  })
+  .catch(function(err) {
+    showAuthError('Connection error. Please check if the server is running.');
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  });
+}
+
+function handleRegister(e) {
+  e.preventDefault();
+  var name = document.getElementById('registerName').value.trim();
+  var email = document.getElementById('registerEmail').value.trim();
+  var password = document.getElementById('registerPassword').value;
+  var btn = document.getElementById('registerBtn');
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+
+  fetch(apiUrl('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, email: email, password: password })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.accessToken) {
+      localStorage.setItem('accessToken', data.accessToken);
+      if (data.user) currentUser = data.user;
+      hideAuthOverlay();
+      initApp();
+    } else {
+      showAuthError(data.error || data.message || 'Registration failed');
+    }
+  })
+  .catch(function(err) {
+    showAuthError('Connection error. Please check if the server is running.');
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  });
+}
+
+function handleLogout() {
+  localStorage.removeItem('accessToken');
+  currentUser = null;
+  currentConversationId = null;
+  conversations = [];
+  teamMembers = [];
+  closeModal('settingsModal');
+  showAuthOverlay();
+}
+
+// --- API CALLS ---
+function loadTeam() {
+  apiRequest('GET', '/api/users')
+  .then(function(data) {
+    var users = data.users || data || [];
+    teamMembers = users.map(function(u, i) {
+      return {
+        id: u.id,
+        name: u.name || u.email,
+        role: u.role || 'member',
+        email: u.email || '',
+        status: u.status || 'online',
+        color: COLORS[i % COLORS.length]
+      };
+    });
+    renderTeam();
+    renderAdmin();
+    var adminBtn = document.getElementById('adminBtn');
+    if (currentUser && (currentUser.role === 'admin')) {
+      adminBtn.style.display = '';
+    } else {
+      adminBtn.style.display = 'none';
+    }
+  })
+  .catch(function(err) {
+    teamMembers = [];
+    renderTeam();
+    document.getElementById('adminBtn').style.display = 'none';
+  });
+}
+
+function loadConversations() {
+  apiRequest('GET', '/api/chat/history')
+  .then(function(data) {
+    conversations = data.conversations || data || [];
+    categorizeAndRenderThreads();
+  })
+  .catch(function(err) {
+    conversations = [];
+    categorizeAndRenderThreads();
+  });
+}
+
+function categorizeAndRenderThreads() {
+  var now = new Date();
+  var today = [];
+  var yesterday = [];
+  var week = [];
+
+  for (var i = 0; i < conversations.length; i++) {
+    var c = conversations[i];
+    var cDate = new Date(c.updatedAt || c.createdAt);
+    var diffMs = now.getTime() - cDate.getTime();
+    var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    var item = {
+      id: c.id,
+      title: c.title || 'Conversation ' + c.id,
+      preview: c.lastMessage || 'No messages yet',
+      messages: c.messages || []
+    };
+    if (diffDays === 0) today.push(item);
+    else if (diffDays === 1) yesterday.push(item);
+    else if (diffDays < 7) week.push(item);
+  }
+
+  renderThreads('threadsToday', today);
+  renderThreads('threadsYesterday', yesterday);
+  renderThreads('threadsWeek', week);
+}
+
+function loadConversation(conversationId) {
+  apiRequest('GET', '/api/chat/' + conversationId)
+  .then(function(data) {
+    var msgs = data.messages || [];
+    currentConversationId = conversationId;
+    renderLoadedMessages(msgs);
+    for (var i = 0; i < conversations.length; i++) {
+      if (conversations[i].id === conversationId) {
+        document.getElementById('chatTitle').textContent = conversations[i].title || 'Conversation';
+        break;
+      }
+    }
+    document.getElementById('chatHeaderSub').textContent = 'Conversation loaded';
+    highlightActiveThread(conversationId);
+  })
+  .catch(function(err) {
+    console.error('Failed to load conversation:', err);
+  });
+}
+
+function loadAnalytics() {
+  apiRequest('GET', '/api/analytics/overview')
+  .then(function(data) {
+    document.getElementById('statMsgToday').textContent = data.messagesToday != null ? data.messagesToday : '--';
+    document.getElementById('statActiveUsers').textContent = data.activeUsers != null ? data.activeUsers : '--';
+    document.getElementById('statAvgResp').textContent = data.avgResponseTime ? (data.avgResponseTime / 1000).toFixed(1) + 's' : '--';
+    document.getElementById('statSatisfaction').textContent = data.satisfaction != null ? data.satisfaction + '%' : '--';
+    if (data.messagesChange) document.getElementById('statMsgChange').textContent = data.messagesChange;
+    if (data.usersChange) document.getElementById('statUsersChange').textContent = data.usersChange;
+    if (data.responseChange) document.getElementById('statRespChange').textContent = data.responseChange;
+    if (data.satisfactionChange) document.getElementById('statSatChange').textContent = data.satisfactionChange;
+  })
+  .catch(function(err) {
+    document.getElementById('statMsgToday').textContent = '--';
+    document.getElementById('statActiveUsers').textContent = '--';
+    document.getElementById('statAvgResp').textContent = '--';
+    document.getElementById('statSatisfaction').textContent = '--';
+  });
+
+  apiRequest('GET', '/api/analytics/messages')
+  .then(function(data) {
+    var daily = data.daily || data.messages || data || [];
+    if (daily.length > 0) {
+      renderChartFromData(daily);
+    } else {
+      renderEmptyChart();
+    }
+    var topics = data.topics || [];
+    if (topics.length > 0) {
+      renderTopicsFromData(topics);
+    } else {
+      renderDefaultTopics();
+    }
+  })
+  .catch(function(err) {
+    renderEmptyChart();
+    renderDefaultTopics();
+  });
+}
 
 // --- RENDER ---
-function initials(name) { return name.split(' ').map(n => n[0]).join(''); }
 function renderTeam() {
-  const el = document.getElementById('teamMembers');
-  el.innerHTML = team.map(m => `
-    <div class="team-member">
-      <div class="avatar" style="background:${m.color}">${initials(m.name)}<span class="status status-${m.status}"></span></div>
-      <div class="member-info"><div class="member-name">${m.name}</div><div class="member-role">${m.role}</div></div>
-    </div>
-  `).join('');
+  var el = document.getElementById('teamMembers');
+  if (teamMembers.length === 0) {
+    el.innerHTML = '<div class="empty-state">No team members</div>';
+    return;
+  }
+  el.innerHTML = teamMembers.map(function(m) {
+    return '<div class="team-member">' +
+      '<div class="avatar" style="background:' + m.color + '">' + initials(m.name) + '<span class="status status-' + m.status + '"></span></div>' +
+      '<div class="member-info"><div class="member-name">' + escapeHtml(m.name) + '</div><div class="member-role">' + m.role + '</div></div>' +
+    '</div>';
+  }).join('');
 }
+
 function renderThreads(group, data) {
-  const el = document.getElementById(group);
-  el.innerHTML = data.map(t => `
-    <div class="thread-item${t.id === 1 ? ' active' : ''}" onclick="selectThread(${t.id})">
-      <div class="thread-title">${t.title}</div>
-      <div class="thread-preview">${t.preview}</div>
-    </div>
-  `).join('');
+  var el = document.getElementById(group);
+  if (data.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="font-size:0.75rem;padding:8px;">No conversations</div>';
+    return;
+  }
+  el.innerHTML = data.map(function(t) {
+    return '<div class="thread-item" data-id="' + t.id + '" onclick="selectThread(' + t.id + ')">' +
+      '<div class="thread-title">' + escapeHtml(t.title) + '</div>' +
+      '<div class="thread-preview">' + escapeHtml(t.preview) + '</div>' +
+    '</div>';
+  }).join('');
 }
-function renderMessages() {
-  const el = document.getElementById('messages');
-  el.innerHTML = sampleMessages.map(m => `
-    <div class="message ${m.role}">
-      <div class="message-avatar"><div class="avatar" style="background:${m.color};width:36px;height:36px;font-size:0.8rem">${m.role === 'assistant' ? '🤖' : initials(m.name)}</div></div>
-      <div>
-        <div class="message-bubble">${m.content}</div>
-        <div class="message-time">${m.time}</div>
-      </div>
-    </div>
-  `).join('');
+
+function highlightActiveThread(id) {
+  document.querySelectorAll('.thread-item').forEach(function(t) {
+    t.classList.remove('active');
+    if (t.getAttribute('data-id') == id) t.classList.add('active');
+  });
+}
+
+function renderLoadedMessages(msgs) {
+  var el = document.getElementById('messages');
+  document.getElementById('emptyMessages').style.display = 'none';
+  if (msgs.length === 0) {
+    el.innerHTML = '<div class="empty-state">No messages in this conversation</div>';
+    return;
+  }
+  el.innerHTML = msgs.map(function(m) {
+    var isUser = m.role === 'user';
+    var color = isUser ? COLORS[0] : '#3b82f6';
+    var avatarContent = isUser ? initials(currentUser ? currentUser.name : 'U') : '&#129302;';
+    var time = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+    return '<div class="message ' + m.role + '">' +
+      '<div class="message-avatar"><div class="avatar" style="background:' + color + ';width:36px;height:36px;font-size:0.8rem">' + avatarContent + '</div></div>' +
+      '<div><div class="message-bubble">' + (m.content || m.text || '') + '</div><div class="message-time">' + time + '</div></div>' +
+    '</div>';
+  }).join('');
   el.scrollTop = el.scrollHeight;
 }
+
 function renderAdmin() {
-  document.getElementById('adminTableBody').innerHTML = team.map(m => `
-    <tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${m.color};width:28px;height:28px;font-size:0.65rem">${initials(m.name)}</div>${m.name}</div></td>
-      <td style="color:var(--text-secondary)">${m.email}</td>
-      <td><span class="role-badge role-${m.role}">${m.role}</span></td>
-      <td><span style="color:${m.status === 'online' ? 'var(--green)' : 'var(--text-muted)'}">${m.status}</span></td>
-      <td><button class="action-btn">Edit</button></td>
-    </tr>
-  `).join('');
+  var tbody = document.getElementById('adminTableBody');
+  if (teamMembers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No team members found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = teamMembers.map(function(m) {
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:' + m.color + ';width:28px;height:28px;font-size:0.65rem">' + initials(m.name) + '</div>' + escapeHtml(m.name) + '</div></td>' +
+      '<td style="color:var(--text-secondary)">' + escapeHtml(m.email) + '</td>' +
+      '<td><span class="role-badge role-' + m.role + '">' + m.role + '</span></td>' +
+      '<td><span style="color:' + (m.status === 'online' ? 'var(--green)' : 'var(--text-muted)') + '">' + m.status + '</span></td>' +
+      '<td><button class="action-btn" onclick="editUserRole(' + m.id + ')">Edit</button></td>' +
+    '</tr>';
+  }).join('');
 }
-function renderChart() {
-  const max = Math.max(...barData.map(d => d.value));
-  document.getElementById('barChart').innerHTML = barData.map(d => `
-    <div style="flex:1;text-align:center">
-      <div class="bar" style="height:${(d.value / max) * 100}%"></div>
-      <div class="bar-label">${d.label}</div>
-    </div>
-  `).join('');
+
+function editUserRole(userId) {
+  var member = null;
+  for (var i = 0; i < teamMembers.length; i++) {
+    if (teamMembers[i].id === userId) { member = teamMembers[i]; break; }
+  }
+  if (!member) return;
+  var roles = ['admin', 'member', 'viewer'];
+  var currentIdx = roles.indexOf(member.role);
+  var nextIdx = (currentIdx + 1) % roles.length;
+  var newRole = roles[nextIdx];
+
+  apiRequest('PATCH', '/api/users/' + userId + '/role', { role: newRole })
+  .then(function() {
+    member.role = newRole;
+    renderAdmin();
+    renderTeam();
+  })
+  .catch(function(err) {
+    alert('Failed to update role: ' + err.message);
+  });
 }
-function renderTopics() {
-  document.getElementById('topicsCloud').innerHTML = topics.map(t =>
-    `<span class="topic-tag ${t.size}">${t.name}</span>`
-  ).join('');
+
+function renderChartFromData(daily) {
+  var max = 0;
+  for (var i = 0; i < daily.length; i++) {
+    if (daily[i].count > max) max = daily[i].count;
+    if (daily[i].value > max) max = daily[i].value;
+  }
+  if (max === 0) max = 1;
+  document.getElementById('barChart').innerHTML = daily.map(function(d) {
+    var val = d.count || d.value || 0;
+    var label = d.label || d.date || d.day || '';
+    if (label.length > 3) label = label.substring(5);
+    return '<div style="flex:1;text-align:center">' +
+      '<div class="bar" style="height:' + (val / max * 100) + '%"></div>' +
+      '<div class="bar-label">' + label + '</div>' +
+    '</div>';
+  }).join('');
 }
-function renderFiles() {
-  document.getElementById('fileTree').innerHTML = files.map(f =>
-    `<div class="file-item"><span class="icon">${f.type === 'dir' ? '📁' : '📄'}</span>${f.name}</div>`
-  ).join('');
+
+function renderEmptyChart() {
+  var days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  document.getElementById('barChart').innerHTML = days.map(function(d) {
+    return '<div style="flex:1;text-align:center">' +
+      '<div class="bar" style="height:4px;background:var(--text-muted)"></div>' +
+      '<div class="bar-label">' + d + '</div>' +
+    '</div>';
+  }).join('');
 }
+
+function renderDefaultTopics() {
+  var defaultTopics = [
+    { name: 'General', size: 'large' }, { name: 'Tasks', size: 'medium' },
+    { name: 'Reports', size: 'medium' }, { name: 'Meetings', size: 'small' },
+    { name: 'Revenue', size: 'small' }, { name: 'Support', size: 'small' }
+  ];
+  renderTopicsFromData(defaultTopics);
+}
+
+function renderTopicsFromData(topics) {
+  document.getElementById('topicsCloud').innerHTML = topics.map(function(t) {
+    var size = t.size || 'small';
+    var name = t.name || t.topic || t.label || '';
+    return '<span class="topic-tag ' + size + '">' + escapeHtml(name) + '</span>';
+  }).join('');
+}
+
 function renderSettings() {
-  document.getElementById('settingsIntegrations').innerHTML = integrations.map((s, i) => `
-    <div class="setting-row">
-      <div><div class="setting-label">${s.name}</div><div class="setting-desc">${s.desc}</div></div>
-      <div class="toggle${s.on ? ' on' : ''}" onclick="this.classList.toggle('on')"></div>
-    </div>
-  `).join('');
-  document.getElementById('settingsTeam').innerHTML = teamSettings.map(s => `
-    <div class="setting-row">
-      <div><div class="setting-label">${s.name}</div><div class="setting-desc">${s.desc}</div></div>
-      <div class="toggle${s.on ? ' on' : ''}" onclick="this.classList.toggle('on')"></div>
-    </div>
-  `).join('');
+  var integrations = [
+    { name: 'Salesforce CRM', desc: 'Sync contacts and deals', on: false },
+    { name: 'HubSpot', desc: 'Marketing automation', on: false },
+    { name: 'Slack', desc: 'Team notifications', on: false },
+    { name: 'GitHub', desc: 'Repository access', on: false },
+    { name: 'Jira', desc: 'Issue tracking', on: false },
+  ];
+  var teamSettings = [
+    { name: 'Activity Logging', desc: 'Track all user actions', on: true },
+    { name: 'Analytics Dashboard', desc: 'Enable team analytics', on: true },
+    { name: 'Data Export', desc: 'Allow CSV/JSON export', on: true },
+    { name: 'Auto-Reports', desc: 'Generate daily summaries', on: false },
+  ];
+  document.getElementById('settingsIntegrations').innerHTML = integrations.map(function(s) {
+    return '<div class="setting-row">' +
+      '<div><div class="setting-label">' + s.name + '</div><div class="setting-desc">' + s.desc + '</div></div>' +
+      '<div class="toggle' + (s.on ? ' on' : '') + '" onclick="this.classList.toggle(\'on\')"></div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('settingsTeam').innerHTML = teamSettings.map(function(s) {
+    return '<div class="setting-row">' +
+      '<div><div class="setting-label">' + s.name + '</div><div class="setting-desc">' + s.desc + '</div></div>' +
+      '<div class="toggle' + (s.on ? ' on' : '') + '" onclick="this.classList.toggle(\'on\')"></div>' +
+    '</div>';
+  }).join('');
 }
 
 // --- INTERACTIONS ---
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'analyticsModal') loadAnalytics();
+}
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+document.querySelectorAll('.modal-overlay').forEach(function(m) {
+  m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('open'); });
 });
+
 function toggleDetail() {
-  const panel = document.getElementById('detailPanel');
+  var panel = document.getElementById('detailPanel');
   panel.classList.toggle('open');
 }
+
 function selectThread(id) {
-  document.querySelectorAll('.thread-item').forEach(t => t.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  loadConversation(id);
 }
+
 function newConversation() {
+  currentConversationId = null;
   document.getElementById('chatTitle').textContent = 'New Conversation';
-  document.getElementById('messages').innerHTML = '';
+  document.getElementById('chatHeaderSub').textContent = 'Start a conversation with your AI assistant';
+  var el = document.getElementById('messages');
+  el.innerHTML = '<div class="empty-state" id="emptyMessages">Send a message to start a conversation</div>';
+  document.querySelectorAll('.thread-item').forEach(function(t) { t.classList.remove('active'); });
+  document.getElementById('chatInput').focus();
 }
+
 function handleInput(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  // Auto-resize
-  const ta = e.target;
+  var ta = e.target;
   ta.style.height = 'auto';
   ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
 }
+
 function sendMessage() {
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
+  var input = document.getElementById('chatInput');
+  var text = input.value.trim();
   if (!text) return;
-  const msgHtml = `
-    <div class="message user">
-      <div class="message-avatar"><div class="avatar" style="background:${COLORS[0]};width:36px;height:36px;font-size:0.8rem">${initials('Sarah Chen')}</div></div>
-      <div><div class="message-bubble">${escapeHtml(text)}</div><div class="message-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div>
-    </div>`;
+
+  var emptyEl = document.getElementById('emptyMessages');
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  var userName = currentUser ? currentUser.name : 'You';
+  var userColor = COLORS[0];
+  var msgHtml = '<div class="message user">' +
+    '<div class="message-avatar"><div class="avatar" style="background:' + userColor + ';width:36px;height:36px;font-size:0.8rem">' + initials(userName) + '</div></div>' +
+    '<div><div class="message-bubble">' + escapeHtml(text) + '</div><div class="message-time">' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</div></div>' +
+  '</div>';
   document.getElementById('messages').insertAdjacentHTML('beforeend', msgHtml);
   input.value = '';
   input.style.height = 'auto';
-  // Typing indicator
+
   document.getElementById('messages').insertAdjacentHTML('beforeend',
-    '<div class="message assistant" id="typing"><div class="message-avatar"><div class="avatar" style="background:#3b82f6;width:36px;height:36px;font-size:0.8rem">🤖</div></div><div><div class="typing-indicator"><span></span><span></span><span></span></div></div></div>');
-  const messagesEl = document.getElementById('messages');
+    '<div class="message assistant" id="typing"><div class="message-avatar"><div class="avatar" style="background:#3b82f6;width:36px;height:36px;font-size:0.8rem">&#129302;</div></div><div><div class="typing-indicator"><span></span><span></span><span></span></div></div></div>');
+  var messagesEl = document.getElementById('messages');
   messagesEl.scrollTop = messagesEl.scrollHeight;
-  // Simulate response
-  setTimeout(() => {
-    const typing = document.getElementById('typing');
+
+  var body = { message: text };
+  if (currentConversationId) body.conversationId = currentConversationId;
+
+  apiRequest('POST', '/api/chat', body)
+  .then(function(data) {
+    var typing = document.getElementById('typing');
     if (typing) typing.remove();
-    const response = generateResponse(text);
-    const respHtml = `
-      <div class="message assistant">
-        <div class="message-avatar"><div class="avatar" style="background:#3b82f6;width:36px;height:36px;font-size:0.8rem">🤖</div></div>
-        <div><div class="message-bubble">${response}</div><div class="message-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div></div>
-      </div>`;
+
+    if (data.conversationId && !currentConversationId) {
+      currentConversationId = data.conversationId;
+      document.getElementById('chatTitle').textContent = 'Conversation ' + data.conversationId;
+      document.getElementById('chatHeaderSub').textContent = 'Started just now';
+      loadConversations();
+    }
+
+    var responseContent = data.response || data.message || data.content || data.text || 'I received your message.';
+    var time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    var respHtml = '<div class="message assistant">' +
+      '<div class="message-avatar"><div class="avatar" style="background:#3b82f6;width:36px;height:36px;font-size:0.8rem">&#129302;</div></div>' +
+      '<div><div class="message-bubble">' + responseContent + '</div><div class="message-time">' + time + '</div></div>' +
+    '</div>';
     document.getElementById('messages').insertAdjacentHTML('beforeend', respHtml);
     messagesEl.scrollTop = messagesEl.scrollHeight;
-  }, 1500);
+  })
+  .catch(function(err) {
+    var typing = document.getElementById('typing');
+    if (typing) typing.remove();
+    var errHtml = '<div class="message assistant">' +
+      '<div class="message-avatar"><div class="avatar" style="background:#ef4444;width:36px;height:36px;font-size:0.8rem">&#129302;</div></div>' +
+      '<div><div class="message-bubble" style="color:var(--red)">Error: ' + escapeHtml(err.message) + '</div><div class="message-time">' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + '</div></div>' +
+    '</div>';
+    document.getElementById('messages').insertAdjacentHTML('beforeend', errHtml);
+    var messagesEl2 = document.getElementById('messages');
+    messagesEl2.scrollTop = messagesEl2.scrollHeight;
+  });
 }
-function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function generateResponse(input) {
-  const lower = input.toLowerCase();
-  if (lower.includes('task') || lower.includes('todo')) return 'I\'ve checked the task board. There are <strong>12 active tasks</strong> across 3 sprints:\n\n- 4 in progress\n- 5 in backlog\n- 3 completed this week\n\nWould you like me to show the breakdown by assignee?';
-  if (lower.includes('report') || lower.includes('summary')) return 'Here\'s today\'s business summary:\n\n<strong>Daily Report — ' + new Date().toLocaleDateString() + '</strong>\n\n- Revenue today: <strong>$47.2K</strong>\n- New leads: <strong>23</strong>\n- Support tickets resolved: <strong>15</strong>\n- Active users: <strong>8</strong>\n\nEverything is on track. Would you like the weekly comparison?';
-  if (lower.includes('meeting') || lower.includes('schedule')) return 'You have <strong>3 meetings</strong> scheduled today:\n\n1. <strong>10:00 AM</strong> — Sprint Planning (5 attendees)\n2. <strong>2:00 PM</strong> — Client Demo — Acme Corp\n3. <strong>4:30 PM</strong> — 1:1 with Maria\n\nShall I prepare briefing notes for any of these?';
-  if (lower.includes('revenue') || lower.includes('sales') || lower.includes('money')) return 'Current revenue metrics:\n\n<strong>MTD Revenue:</strong> $387K (target: $450K)\n<strong>Pipeline:</strong> $2.1M in active opportunities\n<strong>Win Rate:</strong> 34% (up from 28% last quarter)\n\nTop performing product: <strong>Enterprise Plan</strong> at $285K MTD.';
-  return 'I\'ve processed your request. Based on the available data, here\'s what I found:\n\nThe team has been making great progress. <strong>8 team members</strong> are active, with <strong>247 messages</strong> exchanged today. All systems are operational.\n\nWould you like me to dive deeper into any specific area?';
+
+function exportAnalytics(format) {
+  var token = getToken();
+  var url = apiUrl('/api/analytics/export/' + format);
+  fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+  .then(function(res) {
+    if (!res.ok) throw new Error('Export failed');
+    return res.blob();
+  })
+  .then(function(blob) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'analytics-export.' + format;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  })
+  .catch(function(err) {
+    alert('Export failed: ' + err.message);
+  });
 }
 
 // --- INIT ---
-renderTeam();
-renderThreads('threadsToday', threads.today);
-renderThreads('threadsYesterday', threads.yesterday);
-renderThreads('threadsWeek', threads.week);
-renderMessages();
-renderAdmin();
-renderChart();
-renderTopics();
-renderFiles();
-renderSettings();
+function initApp() {
+  loadTeam();
+  loadConversations();
+  renderSettings();
+}
+
+(function bootstrap() {
+  var token = getToken();
+  if (token) {
+    authToken = token;
+    apiRequest('GET', '/api/users')
+    .then(function(data) {
+      var users = data.users || data || [];
+      if (users.length > 0 && users[0].email) {
+        currentUser = { name: 'User', role: 'member' };
+      }
+      hideAuthOverlay();
+      initApp();
+    })
+    .catch(function(err) {
+      if (err.message === 'Unauthorized') {
+        localStorage.removeItem('accessToken');
+        showAuthOverlay();
+      } else {
+        hideAuthOverlay();
+        initApp();
+      }
+    });
+  } else {
+    showAuthOverlay();
+  }
+})();
 </script>
 </body>
 </html>

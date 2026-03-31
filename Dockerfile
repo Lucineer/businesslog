@@ -30,6 +30,7 @@ RUN npm install --omit=dev --frozen-lockfile || npm install --omit=dev
 
 # Copy built artifacts from build stage
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/public ./public
 
 # Create non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
