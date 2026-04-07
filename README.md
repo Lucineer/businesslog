@@ -1,73 +1,65 @@
-# businesslog.ai
-> An AI agent for your business, running in your own environment.
+# businesslog — A self-hosted agent for internal business queries
 
-Your team's operational knowledge should remain under your control. This tool provides an AI assistant that integrates into your existing systems without requiring external data storage or monthly subscriptions.
+Your team's invoices, meeting notes, and process rules stay within your infrastructure. This agent runs on your servers, uses your data, and does not transmit information externally by default.
 
-Built on the open-source Cocapn Fleet protocol. MIT licensed. Self-hosted.
-
----
-
-## Why this exists
-
-Most business AI tools require sending sensitive data to external servers, creating dependencies and potential compliance issues. This project lets you run an AI agent within your infrastructure, keeping your data internal and customizable to your workflow.
+**Live:** [businesslog.ai](https://businesslog.ai)  
+**License:** MIT | Open source | Zero runtime dependencies
 
 ---
 
-## How it works
+## Why This Exists
+Teams often spend time configuring generic AI tools with internal business logic. This project provides an alternative for teams that prefer a self-hosted assistant, avoiding monthly SaaS fees and keeping data in their environment.
 
-This is a deployable agent that uses the Fleet agent-to-agent protocol:
+---
 
-- **Self-contained deployment:** Fork this repository to have a complete, modifiable agent codebase.
-- **Local data processing:** Queries and data remain within your configured environment by default.
-- **Infrastructure flexibility:** Runs on Docker, Cloudflare Workers, or bare metal servers.
-- **Team-ready features:** Includes basic user roles and audit logging.
+## Quick Start
+1.  **Fork this repository.** You own your copy.
+2.  Deploy to Cloudflare Workers via `npm run deploy` or run locally with Docker.
+3.  Connect your data sources and modify the prompts directly in your codebase.
 
 ---
 
 ## Features
-
-- **Multi-user chat interface** – Team members can interact with the assistant
-- **Basic analytics** – View message counts and user activity
-- **Docker deployment** – Containerized setup with `docker compose`
-- **Cloudflare Workers option** – Edge deployment capability
-- **MIT licensed** – Free to use, modify, and distribute
-
----
-
-## Current limitations
-
-Requires manual configuration for production deployments and ongoing maintenance of your chosen infrastructure.
+- Handles business document queries and processes locally
+- Configurable team roles (admin, member, viewer) with audit logs
+- Zero external API calls by default; operates entirely within your environment
+- Consistent runtime on Cloudflare Workers, Node.js, or Docker
+- No vendor lock-in; your fork is independent and permanently modifiable
+- No per-user fees or recurring billing
 
 ---
 
-## Quick start
+## What Makes This Different
+1.  It is not a thin client for a SaaS platform. The entire application runs on your infrastructure.
+2.  Configuration is done through code, not a proprietary dashboard.
+3.  Your fork does not receive automatic updates; changes are under your control.
 
+---
+
+## Limitations
+By default, chat history and user data are stored in memory and will be lost on restart. To persist data, you must integrate your own database.
+
+---
+
+## Run Locally
 ```bash
-# Clone and set up
 git clone https://github.com/cocapn/businesslog.git
 cd businesslog
 bash scripts/setup.sh
-
-# Access the interface
 open http://localhost:3000
 ```
 
-The setup script will guide you through configuring environment variables and starting the service.
-
-For Cloudflare Workers deployment:
+## Deploy to Cloudflare Workers
 ```bash
 npm install
 cp .env.example .env
-# Configure .env, then deploy
+# Add your environment variables
+npm run deploy
 ```
 
 ---
 
-## Attribution
+## Architecture
+This is a lightweight Hono application that runs identically across Cloudflare Workers, Node.js, and Docker. It manages authentication, multi-user chat sessions, and operational logs within your configured environment.
 
-Superinstance & Lucineer (DiGennaro et al.)
-
-<div>
-  <a href="https://the-fleet.casey-digennaro.workers.dev">Fleet</a> ·
-  <a href="https://cocapn.ai">Cocapn</a>
-</div>
+<div style="text-align:center;padding:16px;color:#64748b;font-size:.8rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">The Fleet</a> &middot; <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div>
