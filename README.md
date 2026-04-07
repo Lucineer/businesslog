@@ -1,555 +1,73 @@
 # businesslog.ai
+> An AI agent for your business, running in your own environment.
 
-> Your business AI. Living in your codebase.
+Your team's operational knowledge should remain under your control. This tool provides an AI assistant that integrates into your existing systems without requiring external data storage or monthly subscriptions.
 
-Open-source enterprise AI agent that lives in your company's repo. Multi-user, sandboxed, analytics-ready. Deploy anywhere in minutes. Your data never leaves your infrastructure. Built on [cocapn](https://github.com/cocapn/cocapn) -- the repo IS the agent.
+Built on the open-source Cocapn Fleet protocol. MIT licensed. Self-hosted.
+
+---
+
+## Why this exists
+
+Most business AI tools require sending sensitive data to external servers, creating dependencies and potential compliance issues. This project lets you run an AI agent within your infrastructure, keeping your data internal and customizable to your workflow.
+
+---
+
+## How it works
+
+This is a deployable agent that uses the Fleet agent-to-agent protocol:
+
+- **Self-contained deployment:** Fork this repository to have a complete, modifiable agent codebase.
+- **Local data processing:** Queries and data remain within your configured environment by default.
+- **Infrastructure flexibility:** Runs on Docker, Cloudflare Workers, or bare metal servers.
+- **Team-ready features:** Includes basic user roles and audit logging.
 
 ---
 
 ## Features
 
-- [x] **Multi-user collaboration** -- Team members with role-based access (admin, member, viewer)
-- [x] **Messenger UX** -- Chat with your AI assistant like any messaging app
-- [x] **Analytics dashboard** -- Message volume, active users, popular topics, export to CSV/JSON
-- [x] **Business tools** -- Tasks, reports, meeting summaries, knowledge base
-- [x] **Docker-first** -- Sandboxed deployment with one command (`docker compose up`)
-- [x] **Cloudflare Workers** -- Deploy to the edge with `npx wrangler deploy`
-- [x] **CRM integration points** -- Connect to Salesforce, HubSpot, or build your own
-- [x] **A2A protocol** -- Agent-to-agent protocol for business system integration
-- [x] **Compliance** -- SOC2-ready headers, GDPR-ready architecture, audit logging
-- [x] **Self-hosted** -- Your data never leaves your infrastructure
-- [x] **Free and open source** -- MIT licensed, free forever
+- **Multi-user chat interface** – Team members can interact with the assistant
+- **Basic analytics** – View message counts and user activity
+- **Docker deployment** – Containerized setup with `docker compose`
+- **Cloudflare Workers option** – Edge deployment capability
+- **MIT licensed** – Free to use, modify, and distribute
 
 ---
 
-## Quick Start (Docker)
+## Current limitations
 
-The fastest way to get businesslog running. Three commands:
+Requires manual configuration for production deployments and ongoing maintenance of your chosen infrastructure.
+
+---
+
+## Quick start
 
 ```bash
-# 1. Clone the repository
+# Clone and set up
 git clone https://github.com/cocapn/businesslog.git
 cd businesslog
-
-# 2. Run the setup wizard (prompts for admin email/password)
 bash scripts/setup.sh
 
-# 3. Open in your browser
+# Access the interface
 open http://localhost:3000
 ```
 
-The setup wizard will:
-- Verify Docker and Docker Compose are installed
-- Create `.env` from `.env.example`
-- Generate a secure JWT secret
-- Prompt for admin credentials
-- Build and start all containers (app + SQLite + Redis)
-- Wait for health checks and report status
+The setup script will guide you through configuring environment variables and starting the service.
 
-After setup, register your admin account at `http://localhost:3000/app` and invite your team.
-
-### Manual Docker Setup
-
-If you prefer not to use the setup script:
-
+For Cloudflare Workers deployment:
 ```bash
-cp .env.example .env
-# Edit .env -- set JWT_SECRET, LLM_API_KEY, and admin credentials
-docker compose up -d
-```
-
----
-
-## Quick Start (Cloudflare Workers)
-
-For edge deployment without Docker:
-
-```bash
-# Install dependencies
 npm install
-
-# Configure environment
 cp .env.example .env
-# Set your Cloudflare credentials and LLM API key in .env
-
-# Deploy to Cloudflare Workers
-npx wrangler deploy
-```
-
-Set your secrets in the Cloudflare dashboard or via `wrangler secret`:
-
-```bash
-wrangler secret put JWT_SECRET
-wrangler secret put LLM_API_KEY
+# Configure .env, then deploy
 ```
 
 ---
 
-## Configuration
+## Attribution
 
-All configuration is via environment variables. Copy `.env.example` to `.env` and edit.
+Superinstance & Lucineer (DiGennaro et al.)
 
-### Application
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Runtime environment | `production` |
-| `PORT` | Server port | `3000` |
-| `HOST` | Bind address | `0.0.0.0` |
-
-### Authentication
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `JWT_SECRET` | Token signing key (auto-generated by setup.sh) | required |
-| `JWT_EXPIRY` | Token expiration period | `7d` |
-| `ADMIN_EMAIL` | Initial admin account email | `admin@example.com` |
-| `ADMIN_PASSWORD` | Initial admin account password | `changeme` |
-
-### Database
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | SQLite database path | `file:./data/businesslog.db` |
-| `REDIS_URL` | Redis connection string (leave empty to disable) | `redis://redis:6379` |
-
-### LLM Integration
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LLM_API_KEY` | API key for your LLM provider | required |
-| `LLM_MODEL` | Model identifier | `deepseek-chat` |
-| `LLM_BASE_URL` | Provider API base URL | `https://api.deepseek.com/v1` |
-
-### Logging and Rate Limiting
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LOG_LEVEL` | Log verbosity (trace/debug/info/warn/error/fatal) | `info` |
-| `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:3000,http://localhost:5173` |
-| `RATE_LIMIT_MAX` | Max requests per window per IP | `100` |
-| `RATE_LIMIT_WINDOW` | Rate limit window in milliseconds | `60000` |
-
-### Analytics and Backups
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ANALYTICS_ENABLED` | Enable usage analytics collection | `true` |
-| `BACKUP_SCHEDULE` | Cron schedule for automatic DB backups | `0 2 * * *` |
-
----
-
-## Multi-User Setup
-
-### Registration
-
-New users register at `/app` by clicking the Register tab. The first registered user (matching `ADMIN_EMAIL`) gets the admin role automatically.
-
-### User Roles
-
-| Role | Chat | Tasks | Reports | Analytics | Admin Panel | User Management |
-|------|------|-------|---------|-----------|-------------|-----------------|
-| **Admin** | full | full | full | full | full | full |
-| **Member** | full | full | full | read | none | none |
-| **Viewer** | read | read | read | none | none | none |
-
-### Role Management
-
-Admins can change user roles from the Admin panel in the app sidebar. Roles cycle through admin -> member -> viewer on edit.
-
----
-
-## API Reference
-
-All endpoints accept and return JSON. Authenticate with `Authorization: Bearer <token>`.
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/auth/register` | Create account (`{email, password, name}`) |
-| `POST` | `/api/auth/login` | Login (`{email, password}`) returns `{accessToken, user}` |
-| `POST` | `/api/auth/refresh` | Refresh token |
-
-### Chat
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/chat` | Send message (`{message, conversationId?}`) returns AI response |
-| `GET` | `/api/chat/history` | List conversations with last message |
-| `GET` | `/api/chat/:id` | Get conversation with full message history |
-
-### Business
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/business/reports/daily` | Daily business report |
-| `GET` | `/api/business/reports/weekly` | Weekly business report |
-| `POST` | `/api/business/tasks` | Create task |
-| `GET` | `/api/business/tasks` | List tasks |
-| `GET` | `/api/business/knowledge` | Search knowledge base (`?q=...`) |
-
-### Analytics (admin only)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/analytics/overview` | Dashboard stats (messages, users, response time, satisfaction) |
-| `GET` | `/api/analytics/messages` | Message volume by day + popular topics |
-| `GET` | `/api/analytics/users` | User activity breakdown |
-| `GET` | `/api/analytics/export/:format` | Export analytics as `csv` or `json` |
-
-### Users
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/users` | List team members (admin only) |
-| `PATCH` | `/api/users/:id/role` | Change user role (admin only, `{role}`) |
-
----
-
-## Docker Guide
-
-### Dockerfile
-
-The Dockerfile uses a multi-stage build:
-
-1. **Build stage** -- Installs all dependencies, compiles TypeScript to `dist/`, preserves `public/` for static file serving.
-2. **Runtime stage** -- Installs production dependencies only, copies `dist/` and `public/`, creates a non-root user, adds health checks.
-
-### docker-compose.yml
-
-Three services:
-
-| Service | Image | Purpose |
-|---------|-------|---------|
-| `app` | Built from Dockerfile | Main application server on port 3000 |
-| `db` | alpine:3.19 | SQLite database (shared volume) |
-| `redis` | redis:7-alpine | Caching and rate limiting (64MB max) |
-
-All services communicate on an internal network. Only the app port (3000) and Redis (6379) are exposed to the host.
-
-### Setup Script
-
-`scripts/setup.sh` automates the entire first-run experience:
-
-```bash
-bash scripts/setup.sh
-```
-
-It checks for Docker, generates JWT secrets, prompts for admin credentials, builds containers, and waits for health checks.
-
-### Backup Script
-
-```bash
-bash scripts/backup.sh
-```
-
-Creates a timestamped SQLite database backup in `./backups/`.
-
-### Useful Docker Commands
-
-```bash
-# View logs
-docker compose logs -f app
-
-# Stop all services
-docker compose down
-
-# Restart the app
-docker compose restart app
-
-# Rebuild after code changes
-docker compose up -d --build
-
-# Shell into the running container
-docker compose exec app sh
-
-# Check health
-curl http://localhost:3000/health
-```
-
----
-
-## LLM Configuration
-
-businesslog supports multiple LLM providers through a configurable base URL and model identifier.
-
-### DeepSeek (default)
-
-```env
-LLM_API_KEY=your-deepseek-api-key
-LLM_MODEL=deepseek-chat
-LLM_BASE_URL=https://api.deepseek.com/v1
-```
-
-### OpenAI
-
-```env
-LLM_API_KEY=your-openai-api-key
-LLM_MODEL=gpt-4o
-LLM_BASE_URL=https://api.openai.com/v1
-```
-
-### Anthropic
-
-```env
-LLM_API_KEY=your-anthropic-api-key
-LLM_MODEL=claude-sonnet-4-20250514
-LLM_BASE_URL=https://api.anthropic.com/v1
-```
-
-### Custom / Self-Hosted
-
-```env
-LLM_API_KEY=your-key
-LLM_MODEL=your-model-name
-LLM_BASE_URL=https://your-llm-server.example.com/v1
-```
-
-Works with any OpenAI-compatible API, including Ollama, LocalAI, vLLM, and other self-hosted inference servers.
-
----
-
-## Channel Setup
-
-businesslog can receive messages from external channels via webhooks.
-
-### Telegram
-
-1. Create a bot via [@BotFather](https://t.me/BotFather) on Telegram.
-2. Copy the bot token.
-3. Set the webhook:
-   ```bash
-   curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://your-domain.com/api/webhooks/telegram"
-   ```
-4. Add the bot token to your environment:
-   ```env
-   TELEGRAM_BOT_TOKEN=<your-bot-token>
-   ```
-
-### Discord
-
-1. Create a Discord application at the [Discord Developer Portal](https://discord.com/developers/applications).
-2. Enable the bot and copy the token.
-3. Set up an interactions endpoint URL pointing to `https://your-domain.com/api/webhooks/discord`.
-4. Add the bot token:
-   ```env
-   DISCORD_BOT_TOKEN=<your-bot-token>
-   DISCORD_PUBLIC_KEY=<your-public-key>
-   ```
-
-### WhatsApp (via Twilio)
-
-1. Set up a Twilio account and configure a WhatsApp sender.
-2. Set the webhook URL in your Twilio console to `https://your-domain.com/api/webhooks/whatsapp`.
-3. Add credentials:
-   ```env
-   TWILIO_ACCOUNT_SID=<your-sid>
-   TWILIO_AUTH_TOKEN=<your-auth-token>
-   ```
-
----
-
-## Architecture
-
-```
-businesslog/
-├── public/
-│   ├── index.html          # Landing page
-│   └── app.html            # Web app (messenger UI)
-├── src/
-│   ├── worker.ts            # Main server (Hono)
-│   ├── users/               # Auth, JWT, roles, middleware
-│   ├── business/            # Reports, tasks, knowledge, CRM
-│   ├── analytics/           # Event tracking, aggregation, export
-│   └── agent/               # LLM, memory, context, routing
-├── scripts/
-│   ├── setup.sh             # One-command setup
-│   └── backup.sh            # Data backup
-├── Dockerfile               # Multi-stage build
-├── docker-compose.yml       # App + DB + Redis
-├── package.json
-└── tsconfig.json
-```
-
-### Two-Repo Model
-
-Like all cocapn verticals, businesslog uses two repos:
-
-- **Private repo (brain)** -- Internal analytics, reports, team tools, knowledge base. All committed. Only `secrets/` is gitignored.
-- **Public repo (face)** -- Customer-facing API, docs, support chatbot. Everything committed. No private data.
-
-The agent has different access levels per repo. Private data never leaks to the public boundary.
-
-### Data Flow
-
-```
-User (browser/app)
-  --> WebSocket / HTTP POST /api/chat
-    --> Auth middleware (JWT verification)
-      --> Agent router (LLM provider)
-        --> Response stream back to user
-      --> Analytics event recorded
-    --> Message stored in SQLite
-```
-
-### Key Dependencies
-
-- **Hono** -- Fast web framework (works on Node.js and Cloudflare Workers)
-- **SQLite** -- Embedded database via `DATABASE_URL`
-- **Redis** -- Optional caching and rate limiting
-- **JWT** -- Stateless authentication with Bearer tokens
-
----
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Development server with hot reload
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-
-# Type check
-npx tsc --noEmit
-
-# Lint
-npm run lint
-```
-
-### Development with Docker
-
-```bash
-# Build and run with hot reload
-docker compose -f docker-compose.yml up --build
-
-# Run tests inside container
-docker compose exec app npm test
-```
-
-### Project Structure Conventions
-
-- TypeScript strict mode enabled
-- ESM modules (`"type": "module"`)
-- Tests alongside source in `tests/` directories
-- No JSX -- Preact + HTM for web UI
-- Environment auto-detects: `CLOUDFLARE_ACCOUNT_ID` for Workers, `DOCKER_CONTAINER` for Docker
-
----
-
-## Troubleshooting
-
-### Container won't start
-
-```bash
-# Check container logs
-docker compose logs app
-
-# Verify .env exists and has required values
-cat .env | grep -E '(JWT_SECRET|LLM_API_KEY)'
-
-# Rebuild from scratch
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-```
-
-### Health check fails
-
-```bash
-# Manual health check
-curl -v http://localhost:3000/health
-
-# Check if port 3000 is already in use
-lsof -i :3000
-
-# Restart the app container
-docker compose restart app
-```
-
-### LLM responses are empty or erroring
-
-- Verify `LLM_API_KEY` is set correctly in `.env`
-- Verify `LLM_BASE_URL` matches your provider
-- Check that the model name in `LLM_MODEL` is valid for your provider
-- Test the API key directly:
-  ```bash
-  curl -H "Authorization: Bearer $LLM_API_KEY" "$LLM_BASE_URL/models"
-  ```
-
-### Login fails after restart
-
-- JWT tokens are signed with `JWT_SECRET`. If it changes, all existing tokens become invalid.
-- Users need to log in again after a `JWT_SECRET` change.
-- To keep sessions stable, do not regenerate `JWT_SECRET` on each deploy.
-
-### Redis connection errors
-
-- If Redis is not needed, remove or comment out `REDIS_URL` in `.env`
-- If using Docker Compose, ensure the Redis service is running: `docker compose ps redis`
-- Test connectivity: `docker compose exec app sh -c "wget -qO- redis://redis:6379/ping"`
-
-### Database locked errors
-
-- SQLite does not support high concurrency writes. For heavy workloads, consider an external PostgreSQL or MySQL database.
-- Ensure only one app process is writing to the database file.
-- Backups use `sqlite3` backup API to avoid locking.
-
-### Port already in use
-
-```bash
-# Find what is using port 3000
-lsof -i :3000
-
-# Change the port in .env
-PORT=3001
-
-# Restart
-docker compose up -d
-```
-
-### Reset everything
-
-```bash
-# Stop and remove all containers, volumes, and data
-docker compose down -v
-
-# Remove the database
-rm -f data/businesslog.db
-
-# Start fresh
-bash scripts/setup.sh
-```
-
----
-
-## Backup
-
-```bash
-# Manual backup
-bash scripts/backup.sh
-
-# Backups are stored in ./backups/ with timestamps
-ls -la backups/
-
-# Restore from backup
-cp backups/businesslog-YYYYMMDD-HHMMSS.db data/businesslog.db
-docker compose restart app
-```
-
----
-
-## License
-
-MIT -- Free and open source forever.
-
----
-
-Built on [cocapn](https://github.com/cocapn/cocapn) -- the repo IS the agent.
+<div>
+  <a href="https://the-fleet.casey-digennaro.workers.dev">Fleet</a> ·
+  <a href="https://cocapn.ai">Cocapn</a>
+</div>
